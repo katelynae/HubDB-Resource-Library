@@ -1,0 +1,158 @@
+{% if module.hubdb_table %}
+<div class="row-fluid resources-container">
+  <!-- FILTERS SIDEBAR -->
+  <div class="span3 widget-span resources-sidebar-container">
+    <div class="sidebar-filters">
+      <aside class="filters-content">
+        <h2>
+          Filter resources
+        </h2>
+        <div class="filter-group">
+          <h3>
+            Search
+          </h3>
+          <div class="filter-search">
+            <form id="form_id" method="get">
+              <input name="name" type="text" id="search-by" class="autocomplete"  placeholder="Search by title">
+              <button type="submit" class="search-button"></button>   
+            </form>
+          </div>
+        </div>
+        <div class="filter-group">
+          <h3>
+            Content Types
+          </h3>
+          <form id="form_id" method="get">
+
+            <select name="content_type" form="form_id" onChange="this.form.submit()">
+              <option value="show-all">Show All</option>
+              {% set types = hubdb_table_column(module.hubdb_table, "content_type").options %}
+              {% for choice in types %}
+              {% set type_list = type_list~choice.id|list%}
+              {% if choice.id == request.query_dict.content_type%}
+              <option selected="selected" value="{{ choice.id }}">{{ choice.name }}</option>
+              {% else %}
+              <option value="{{ choice.id }}">{{ choice.name }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+
+          </form>
+        </div>
+        <input name="page" type="hidden" id="page" class="autocomplete"  placeholder="page">
+      </aside>
+    </div>
+  </div>
+{% set page_size = 10 %} {# Define Page Size Here #}
+{% set rowCount = hubdb_table(module.hubdb_table).row_count %}
+{% set pageCount =(rowCount/page_size)|round(0, 'ceil') %}
+{% if request.query_dict.page %}
+{% set page_num = request.query_dict.page|int %}
+{% else %}
+{% set page_num = 1 %}
+{% endif %}
+{% if page_num == "" or page_num == "1"%} 
+{% set offsetNum = page_size  %}
+{% else %}
+{% set offsetNum = (page_num)*page_size  %}
+{% endif %}
+  
+{% set queryparam = "" %}
+{% if request.query_dict.content_type in ["1", "2", "3", "4", "5", "6", "7", "8", "9"] %}
+    {% set queryparam = queryparam ~ "&content_type="~request.query_dict.content_type|urlencode %}
+{% endif %}
+{% if request.query_dict.content_type in ["1", "2", "3", "4", "5", "6", "7", "8", "9"] and request.query_dict.name != "" %}
+    {% set queryparam = queryparam~"&content_type="~request.query_dict.content_type|urlencode~"&name__icontains="~request.query_dict.name|urlencode %}
+{% endif %}
+{% if request.query_dict.content_type == "show-all" and request.query_dict.name != "" %}
+    {% set queryparam = queryparam~"&name__icontains="~request.query_dict.name|urlencode %}
+{% endif %}
+
+{% set count = hubdb_table_rows(module.hubdb_table, queryparam) %}
+{% set pageCount3 = count|length %}
+{% set pageCount4 =(pageCount3/page_size)|round(0, 'ceil') %}
+{% if offsetNum =="0" %}
+{% set queryparam = queryparam~"&limit=" + page_size %}
+{% else %}
+{% set queryparam = queryparam~"&limit="~offsetNum %}
+{% endif %}
+{% set table = hubdb_table_rows(module.hubdb_table, queryparam) %}
+
+{% if table == [] %}
+<div class="page-center"><div class="no-results">No matching results</div></div>
+{% else %}
+  <!-- RESOURCES RESULTS -->
+  <div class="resources-results-container">
+    <div class="resource-items-container">
+      {% for row in table %}
+      {% if row.featured == "1" %}
+        <div class="resource-item featured">
+          <div class="item-content">
+            <h2>
+              <a href="{{ row.link }}" target="_blank">{{ row.name }}</a>
+            </h2>
+            <div class="tags">
+              <span class="tag">{{ row.content_type.name }}</span>
+            </div>
+          </div>
+          <figure class="item-image">
+            <a class="item-link" target="_blank" href="{{ row.link }}">
+              <img src="{{ row.image.url }}" />
+            </a>
+            <figcaption>
+              <strong>{{ row.name }}</strong>
+              {{ row.description }}
+              <a class="item-cta" href="{{ row.link }}" target="_blank">View Details</a>
+            </figcaption>
+          </figure>
+          <div class="featured-ribbon">
+            <span class="featured-star"></span>
+          </div>
+        </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="resource-items-container">
+    {% for row in table %}
+      <div class="resource-item" {% if row.featured == "1" %} style="display: none;" {% endif %}>
+        <div class="item-content">
+          <h2>
+            <a href="{{ row.link }}" target="_blank">{{ row.name }}</a>
+          </h2>
+          <div class="tags">
+            <span class="tag">{{ row.content_type.name }}</span>
+          </div>
+        </div>
+        <figure class="item-image">
+          <a class="item-link" target="_blank" href="{{ row.link }}">
+            <img src="{{ row.image.url }}" />
+          </a>
+          <figcaption>
+            <strong>{{ row.name }}</strong>
+            {{ row.description }}
+            <a class="item-cta" href="{{ row.link }}" target="_blank">View Details</a>
+          </figcaption>
+        </figure>
+      </div>
+    {% endfor %}
+    </div>
+  <!-- PAGINATION -->
+    {% set page_num = page_num + 1 %}
+    {% if page_num <= pageCount4 %}
+    {% if request.query_dict %}
+    {% set paginationPath = request.path + "?topics="+ request.query_dict.topics|urlencode +"&content_type=" + request.query_dict.content_type|urlencode + "&Name=" + "&page=" + page_num  %}
+    {% else %}
+    {% set paginationPath = request.path + "?&page=" + page_num  %}
+    {% endif %}
+    <div class="resources-pagination">
+      <a class="next-link resources-load-more" id="loadm" data-total-page-count="{{ pageCount4 }}" href="{{ paginationPath }}">Load More</a>  
+    </div>
+
+    {% endif %}
+    
+  </div>
+{% endif %}
+</div>
+{% endif %}
+
+
